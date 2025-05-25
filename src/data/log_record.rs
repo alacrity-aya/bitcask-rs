@@ -12,6 +12,12 @@ pub struct LogRecord {
     pub(crate) rec_type: LogRecordType,
 }
 
+impl LogRecord {
+    pub fn encode(&self) -> Vec<u8> {
+        todo!()
+    }
+}
+
 #[derive(Copy, Clone)]
 pub struct LogRecordPos {
     pub(crate) file_id: u32,
