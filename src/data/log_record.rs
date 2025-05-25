@@ -1,3 +1,4 @@
+#[derive(PartialEq, Eq)]
 pub enum LogRecordType {
     //put normally
     Normal = 1,
@@ -18,6 +19,7 @@ impl LogRecord {
     }
 }
 
+/// index info in memory
 #[derive(Copy, Clone)]
 pub struct LogRecordPos {
     pub(crate) file_id: u32,

@@ -5,6 +5,10 @@ use std::sync::Arc;
 
 use crate::fio;
 
+use super::log_record::LogRecord;
+
+pub const DATA_FILE_NAME_SUFFIX: &str = ".data";
+
 pub struct DataFile {
     file_id: Arc<RwLock<u32>>,   //current file id
     write_off: Arc<RwLock<u64>>, //writing position offset
@@ -13,9 +17,6 @@ pub struct DataFile {
 
 impl DataFile {
     pub fn new(dir_path: PathBuf, file_id: u32) -> Result<DataFile> {
-        todo!()
-    }
-    pub fn new(dir_path: PathBuf) -> Result<DataFile> {
         todo!()
     }
 
@@ -29,6 +30,14 @@ impl DataFile {
     }
 
     pub fn sync(&self) -> Result<()> {
+        todo!()
+    }
+
+    pub fn write(&self, buf: &[u8]) -> Result<usize> {
+        todo!()
+    }
+
+    pub fn read_log_record(&self, offset: u64) -> Result<LogRecord> {
         todo!()
     }
 }
