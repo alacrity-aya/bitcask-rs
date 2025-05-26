@@ -1,4 +1,5 @@
 use crate::data::data_file::DataFile;
+use crate::data::data_file::DATA_FILE_NAME_SUFFIX;
 use crate::data::log_record::LogRecord;
 use crate::data::log_record::LogRecordPos;
 use crate::data::log_record::LogRecordType;
@@ -9,6 +10,7 @@ use crate::options::Options;
 use bytes::Bytes;
 use parking_lot::RwLock;
 use std::collections::HashMap;
+use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -117,7 +119,35 @@ impl Engine {
     }
 }
 
+///load data file from dir_path
 fn load_data_file(dir_path: &PathBuf) -> Result<Vec<DataFile>> {
+    let dir = fs::read_dir(dir_path);
+    if dir.is_err() {
+        return Err(Errors::ReadDatabaseDirErr);
+    }
+
+    let mut file_idx: Vec<u32> = Vec::new();
+    let mut data_files: Vec<DataFile> = Vec::new();
+
+    //get file id
+    for file in dir.unwrap() {
+        if let Ok(entry) = file {
+            let os_file_name = entry.file_name();
+            let file_name = os_file_name.to_str().unwrap();
+
+            if !file_name.ends_with(DATA_FILE_NAME_SUFFIX) {
+                continue;
+            }
+            let split_name: Vec<&str> = file_name.split(".").collect();
+
+            let file_id = match split_name[0].parse::<u32>() {
+                Ok(fid) => fid,
+                Err(_) => return Err(Errors::DataDirCorrupted),
+            };
+            file_idx.push(file_id);
+        }
+    }
+
     todo!()
 }
 

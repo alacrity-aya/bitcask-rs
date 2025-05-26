@@ -41,6 +41,9 @@ pub enum Errors {
 
     #[error("fail to read database dir")]
     ReadDatabaseDirErr,
+
+    #[error("data dir may be corrupted")]
+    DataDirCorrupted,
 }
 
 pub type Result<T> = result::Result<T, Errors>;
