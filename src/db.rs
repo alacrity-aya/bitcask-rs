@@ -1,18 +1,16 @@
-use crate::data::data_file::DataFile;
-use crate::data::data_file::DATA_FILE_NAME_SUFFIX;
-use crate::data::log_record::LogRecord;
-use crate::data::log_record::LogRecordPos;
-use crate::data::log_record::LogRecordType;
-use crate::errors::Errors;
-use crate::errors::Result;
-use crate::index;
+use crate::data::{
+    data_file::{DataFile, DATA_FILE_NAME_SUFFIX},
+    log_record::{LogRecord, LogRecordPos, LogRecordType},
+};
 use crate::options::Options;
+use crate::{
+    errors::{Errors, Result},
+    index,
+};
 use bytes::Bytes;
+use log::warn;
 use parking_lot::RwLock;
-use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{collections::HashMap, fs, path::PathBuf, sync::Arc};
 
 ///bitcask engine
 pub struct Engine {
@@ -28,6 +26,15 @@ impl Engine {
         if let Some(e) = check_options(&opts) {
             return Err(e);
         }
+        let options = &opts;
+        let dir_path = &options.dir_path;
+        if dir_path.is_dir() {
+            if let Err(e) = fs::create_dir_all(dir_path) {
+                warn!("create database dir err:{e}\n");
+                return Err(Errors::CreateDatabaseDirErr);
+            }
+        }
+        let data_files = load_data_file(dir_path);
         todo!()
     }
 
@@ -134,12 +141,10 @@ fn load_data_file(dir_path: &PathBuf) -> Result<Vec<DataFile>> {
         if let Ok(entry) = file {
             let os_file_name = entry.file_name();
             let file_name = os_file_name.to_str().unwrap();
-
             if !file_name.ends_with(DATA_FILE_NAME_SUFFIX) {
                 continue;
             }
             let split_name: Vec<&str> = file_name.split(".").collect();
-
             let file_id = match split_name[0].parse::<u32>() {
                 Ok(fid) => fid,
                 Err(_) => return Err(Errors::DataDirCorrupted),
@@ -147,8 +152,19 @@ fn load_data_file(dir_path: &PathBuf) -> Result<Vec<DataFile>> {
             file_idx.push(file_id);
         }
     }
+    if file_idx.is_empty() {
+        return Ok(data_files);
+    }
 
-    todo!()
+    //对文件id进行排序，从小到大进行加载
+    file_idx.sort();
+
+    for file_id in file_idx.iter() {
+        let data_file = DataFile::new(dir_path.to_path_buf(), *file_id)?;
+        data_files.push(data_file);
+    }
+
+    Ok(data_files)
 }
 
 fn check_options(opts: &Options) -> Option<Errors> {

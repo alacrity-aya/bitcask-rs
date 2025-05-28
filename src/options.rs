@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 ///recording the configuraiton set by user
+#[derive(Clone, Copy)]
 pub struct Options {
     pub dir_path: PathBuf,
 
