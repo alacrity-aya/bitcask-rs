@@ -18,7 +18,10 @@ pub struct Engine {
     active_file: Arc<RwLock<DataFile>>,
     older_files: Arc<RwLock<HashMap<u32, DataFile>>>,
     index: Box<dyn index::Indexer>, //Btree Skiplist LSM-Tree...
+    file_ids: Vec<u32>,
 }
+
+const INITAL_FILE_ID: u32 = 0;
 
 //面向用户的接口
 impl Engine {
@@ -26,16 +29,42 @@ impl Engine {
         if let Some(e) = check_options(&opts) {
             return Err(e);
         }
-        let options = &opts;
-        let dir_path = &options.dir_path;
+        let dir_path = &opts.dir_path;
         if dir_path.is_dir() {
             if let Err(e) = fs::create_dir_all(dir_path) {
                 warn!("create database dir err:{e}\n");
                 return Err(Errors::CreateDatabaseDirErr);
             }
         }
-        let data_files = load_data_file(dir_path);
-        todo!()
+        let mut data_files = load_data_file(dir_path)?;
+
+        let mut file_ids = Vec::new();
+        for v in data_files.iter() {
+            file_ids.push(v.get_file_id());
+        }
+        //put old files into older_files
+        let mut older_files = HashMap::new();
+        if data_files.len() > 1 {
+            for _ in 0..data_files.len() - 2 {}
+            let file = data_files.pop().unwrap();
+            older_files.insert(file.get_file_id(), file);
+        }
+
+        //get the current active file that is the last ele in data_files
+        let active_file = match data_files.pop() {
+            Some(v) => v,
+            None => DataFile::new(dir_path.to_path_buf(), INITAL_FILE_ID)?,
+        };
+
+        let engine = Self {
+            options: Arc::new(opts.clone()),
+            active_file: Arc::new(RwLock::new(active_file)),
+            older_files: Arc::new(RwLock::new(older_files)),
+            index: Box::new(index::new_indexer(opts.index_type)),
+            file_ids,
+        };
+
+        Ok(engine)
     }
 
     pub fn put(&self, key: Bytes, value: Bytes) -> Result<()> {
@@ -73,13 +102,13 @@ impl Engine {
         let active_file = self.active_file.read();
         let older_file = self.older_files.read();
         let log_record = match active_file.get_file_id() == pos.file_id {
-            true => active_file.read_log_record(pos.offset)?,
+            true => active_file.read_log_record(pos.offset)?.record,
             false => {
                 let data_file = older_file.get(&pos.file_id);
                 if data_file.is_none() {
                     return Err(Errors::DataFileNotFound);
                 }
-                data_file.unwrap().read_log_record(pos.offset)?
+                data_file.unwrap().read_log_record(pos.offset)?.record
             }
         };
 
@@ -123,6 +152,54 @@ impl Engine {
             file_id: active_file.get_file_id(),
             offset: active_file.get_write_off(),
         })
+    }
+
+    fn lood_index_from_data_files(&mut self) -> Result<()> {
+        if self.file_ids.is_empty() {
+            return Ok(());
+        }
+
+        let active_file = self.active_file.read();
+        let older_file = self.older_files.read();
+
+        for (i, file_id) in self.file_ids.iter().enumerate() {
+            let mut offset = 0;
+            loop {
+                let log_record_res = match *file_id == active_file.get_file_id() {
+                    true => active_file.read_log_record(offset),
+                    false => {
+                        let data_file = older_file.get(&(i as u32)).unwrap();
+                        data_file.read_log_record(offset)
+                    }
+                };
+                let (log_record, size) = match log_record_res {
+                    Ok(result) => (result.record, result.size),
+                    Err(e) => {
+                        if e == Errors::ReadDataFileEOF {
+                            break;
+                        }
+                        return Err(e);
+                    }
+                };
+
+                //setup memory index
+                let log_record_pos = LogRecordPos {
+                    file_id: *file_id,
+                    offset,
+                };
+                match log_record.rec_type {
+                    LogRecordType::Normal => {
+                        self.index.put(log_record.key.to_vec(), log_record_pos)
+                    }
+
+                    LogRecordType::Deleted => self.index.delete(log_record.key.to_vec()),
+                };
+
+                //updata offset
+                offset += size;
+            }
+        }
+        todo!()
     }
 }
 

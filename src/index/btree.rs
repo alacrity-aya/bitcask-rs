@@ -12,7 +12,7 @@ pub struct Btree {
 }
 
 impl Btree {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             tree: Arc::new(RwLock::new(BTreeMap::new())),
         }

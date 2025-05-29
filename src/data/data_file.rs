@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::fio;
 
-use super::log_record::LogRecord;
+use super::log_record::ReadLogRecord;
 
 pub const DATA_FILE_NAME_SUFFIX: &str = ".data";
 
@@ -25,6 +25,11 @@ impl DataFile {
         *read_guard
     }
 
+    pub fn set_write_off(&mut self, offset: u64) {
+        let mut write_guard = self.write_off.write();
+        *write_guard = offset;
+    }
+
     pub fn get_file_id(&self) -> u32 {
         *self.file_id.read()
     }
@@ -37,7 +42,7 @@ impl DataFile {
         todo!()
     }
 
-    pub fn read_log_record(&self, offset: u64) -> Result<LogRecord> {
+    pub fn read_log_record(&self, offset: u64) -> Result<ReadLogRecord> {
         todo!()
     }
 }

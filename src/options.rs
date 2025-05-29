@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 ///recording the configuraiton set by user
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Options {
     pub dir_path: PathBuf,
 
@@ -10,4 +10,12 @@ pub struct Options {
 
     //whether to sync every write operation
     pub sync_writes: bool,
+
+    pub index_type: IndexType,
+}
+
+#[derive(Clone)]
+pub enum IndexType {
+    Btree,
+    SkipList,
 }
