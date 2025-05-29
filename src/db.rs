@@ -64,6 +64,8 @@ impl Engine {
             file_ids,
         };
 
+        engine.load_index_from_data_files()?;
+
         Ok(engine)
     }
 
@@ -81,6 +83,32 @@ impl Engine {
         let log_record_pos = self.append_log_record(&mut record)?;
 
         match self.index.put(key.to_vec(), log_record_pos) {
+            true => Ok(()),
+            false => Err(Errors::UpdateIndexErr),
+        }
+    }
+
+    pub fn delete(&self, key: Bytes) -> Result<()> {
+        if key.is_empty() {
+            return Err(Errors::EmptyKey);
+        }
+
+        //look up whether the look is existed. if it doesn't exist, return
+        let pos = self.index.get(key.to_vec());
+        if pos.is_none() {
+            return Ok(());
+        }
+
+        //after getting the vaild key, we should put it into active_file
+        let mut record = LogRecord {
+            key: key.to_vec(),
+            value: Default::default(),
+            rec_type: LogRecordType::Deleted,
+        };
+        self.append_log_record(&mut record)?;
+
+        //remove key from memory index
+        match self.index.delete(key.to_vec()) {
             true => Ok(()),
             false => Err(Errors::UpdateIndexErr),
         }
@@ -154,7 +182,7 @@ impl Engine {
         })
     }
 
-    fn lood_index_from_data_files(&mut self) -> Result<()> {
+    fn load_index_from_data_files(&self) -> Result<()> {
         if self.file_ids.is_empty() {
             return Ok(());
         }
@@ -187,7 +215,7 @@ impl Engine {
                     file_id: *file_id,
                     offset,
                 };
-                match log_record.rec_type {
+                let ok = match log_record.rec_type {
                     LogRecordType::Normal => {
                         self.index.put(log_record.key.to_vec(), log_record_pos)
                     }
@@ -195,11 +223,15 @@ impl Engine {
                     LogRecordType::Deleted => self.index.delete(log_record.key.to_vec()),
                 };
 
+                if !ok {
+                    return Err(Errors::UpdateIndexErr);
+                }
+
                 //updata offset
                 offset += size;
             }
         }
-        todo!()
+        Ok(())
     }
 }
 
@@ -227,6 +259,8 @@ fn load_data_file(dir_path: &PathBuf) -> Result<Vec<DataFile>> {
                 Err(_) => return Err(Errors::DataDirCorrupted),
             };
             file_idx.push(file_id);
+        } else {
+            unreachable!("dir.unwrap() return Err\n"); //TODO: should return a Errors:: here
         }
     }
     if file_idx.is_empty() {
