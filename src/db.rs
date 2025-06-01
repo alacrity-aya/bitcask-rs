@@ -228,7 +228,7 @@ impl Engine {
                 }
 
                 //updata offset
-                offset += size;
+                offset += size as u64;
             }
         }
         Ok(())

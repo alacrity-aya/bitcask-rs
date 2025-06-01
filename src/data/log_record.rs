@@ -1,3 +1,8 @@
+use prost::length_delimiter_len;
+
+pub(crate) const CRC_LENGTH: usize = 4;
+pub(crate) const TYPE_LENGTH: usize = 1;
+
 #[derive(PartialEq, Eq)]
 pub enum LogRecordType {
     //put normally
@@ -5,6 +10,16 @@ pub enum LogRecordType {
 
     //tombstone
     Deleted = 2,
+}
+
+impl LogRecordType {
+    pub fn from_u8(v: u8) -> Self {
+        match v {
+            1 => Self::Normal,
+            2 => Self::Deleted,
+            _ => unreachable!("unknow log record type"),
+        }
+    }
 }
 
 pub struct LogRecord {
@@ -15,6 +30,10 @@ pub struct LogRecord {
 
 impl LogRecord {
     pub fn encode(&self) -> Vec<u8> {
+        todo!()
+    }
+
+    pub fn get_crc(&mut self) -> u32 {
         todo!()
     }
 }
@@ -28,5 +47,9 @@ pub struct LogRecordPos {
 
 pub struct ReadLogRecord {
     pub(crate) record: LogRecord,
-    pub(crate) size: u64,
+    pub(crate) size: usize,
+}
+
+pub fn max_log_record_header_size() -> usize {
+    std::mem::size_of::<u8>() + length_delimiter_len(u32::MAX as usize) * 2
 }

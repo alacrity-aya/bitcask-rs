@@ -1,4 +1,7 @@
 pub mod file_io;
+use file_io::FileIO;
+use std::path::PathBuf;
+
 use super::errors::Result;
 
 pub trait IOManager: Sync + Send {
@@ -8,4 +11,8 @@ pub trait IOManager: Sync + Send {
 
     /// 持久化数据
     fn sync(&self) -> Result<()>;
+}
+
+pub fn new_io_manager(file_name: PathBuf) -> Result<impl IOManager> {
+    FileIO::new(file_name)
 }
