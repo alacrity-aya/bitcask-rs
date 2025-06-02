@@ -42,6 +42,8 @@ impl Engine {
         for v in data_files.iter() {
             file_ids.push(v.get_file_id());
         }
+
+        data_files.reverse();
         //put old files into older_files
         let mut older_files = HashMap::new();
         if data_files.len() > 1 {

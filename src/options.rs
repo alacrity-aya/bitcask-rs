@@ -19,3 +19,14 @@ pub enum IndexType {
     Btree,
     SkipList,
 }
+
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            dir_path: std::env::temp_dir().join("biscask-rs"),
+            data_file_size: 256 * 1024 * 1024,
+            sync_writes: false,
+            index_type: IndexType::Btree,
+        }
+    }
+}
