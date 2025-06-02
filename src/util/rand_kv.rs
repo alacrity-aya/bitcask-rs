@@ -23,17 +23,3 @@ fn test_get_test_key_value() {
         assert!(get_test_value(i).len() > 0)
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    #[test]
-    fn test_get_test_key() {
-        for i in 0..10 {
-            assert!(get_test_key(i).len() > 0);
-        }
-        for i in 0..10 {
-            assert!(get_test_value(i).len() > 0);
-        }
-    }
-}

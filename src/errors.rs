@@ -1,25 +1,26 @@
 use std::result;
+
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Errors {
-    #[error("fail to read from data file")]
-    ReadFromDataFileErr,
+    #[error("failed to read from data file")]
+    FailedReadFromDataFile,
 
-    #[error("fail to write to data file")]
-    WriteToDataFileErr,
+    #[error("failed to write to data file")]
+    FailedWriteToDataFile,
 
-    #[error("fail to sync data file")]
-    SyncDataFileErr,
+    #[error("failed to sync data file")]
+    FailedSyncDataFile,
 
-    #[error("fail to open data file")]
-    OpenDataFileErr,
+    #[error("failed to open data file")]
+    FailedToOpenDataFile,
 
-    #[error("key is empty")]
-    EmptyKey,
+    #[error("the key is empty")]
+    KeyIsEmpty,
 
-    #[error("fail to update memory index")]
-    UpdateIndexErr,
+    #[error("memory index failed to update")]
+    IndexUpdateFailed,
 
     #[error("key is not found in database")]
     KeyNotFound,
@@ -30,26 +31,23 @@ pub enum Errors {
     #[error("database dir path can not be empty")]
     DirPathIsEmpty,
 
-    #[error("corresponding value is not found")]
-    ValueNotFound,
-
-    #[error("data file should larger than zero")]
+    #[error("database data file size must be greater than 0")]
     DataFileSizeTooSmall,
 
-    #[error("fail to create database dir")]
-    CreateDatabaseDirErr,
+    #[error("failed to create the database directory")]
+    FailedToCreateDatabaseDir,
 
-    #[error("fail to read database dir")]
-    ReadDatabaseDirErr,
+    #[error("failed to read the database directory")]
+    FailedToReadDatabaseDir,
 
-    #[error("data dir may be corrupted")]
-    DataDirCorrupted,
+    #[error("the database directory maybe corrupted")]
+    DataDirectoryCorrupted,
 
     #[error("read data file eof")]
     ReadDataFileEOF,
 
-    #[error("invalid crc")]
-    InvalidLogRecordCRC,
+    #[error("invalid crc value, log record maybe corrupted")]
+    InvalidLogRecordCrc,
 }
 
 pub type Result<T> = result::Result<T, Errors>;

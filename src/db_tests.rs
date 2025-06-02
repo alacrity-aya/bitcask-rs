@@ -33,7 +33,7 @@ fn test_engine_put() {
 
     // 3.key 为空
     let res6 = engine.put(Bytes::new(), get_test_value(123));
-    assert_eq!(Errors::EmptyKey, res6.err().unwrap());
+    assert_eq!(Errors::KeyIsEmpty, res6.err().unwrap());
 
     // 4.value 为空
     let res7 = engine.put(get_test_key(33), Bytes::new());
@@ -137,7 +137,7 @@ fn test_engine_delete() {
 
     // 3.删除一个空的 key
     let res5 = engine.delete(Bytes::new());
-    assert_eq!(Errors::EmptyKey, res5.err().unwrap());
+    assert_eq!(Errors::KeyIsEmpty, res5.err().unwrap());
 
     // 4.值被删除之后重新 Put
     let res6 = engine.put(get_test_key(222), get_test_value(222));

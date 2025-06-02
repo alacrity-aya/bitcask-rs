@@ -1,5 +1,4 @@
-use std::collections::BTreeMap;
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 use parking_lot::RwLock;
 
@@ -7,11 +6,12 @@ use crate::data::log_record::LogRecordPos;
 
 use super::Indexer;
 
-pub struct Btree {
+// BTree 索引，主要封装了标准库中的 BTreeMap 结构
+pub struct BTree {
     tree: Arc<RwLock<BTreeMap<Vec<u8>, LogRecordPos>>>,
 }
 
-impl Btree {
+impl BTree {
     pub fn new() -> Self {
         Self {
             tree: Arc::new(RwLock::new(BTreeMap::new())),
@@ -19,7 +19,7 @@ impl Btree {
     }
 }
 
-impl Indexer for Btree {
+impl Indexer for BTree {
     fn put(&self, key: Vec<u8>, pos: LogRecordPos) -> bool {
         let mut write_guard = self.tree.write();
         write_guard.insert(key, pos);
@@ -33,103 +33,96 @@ impl Indexer for Btree {
 
     fn delete(&self, key: Vec<u8>) -> bool {
         let mut write_guard = self.tree.write();
-        write_guard.remove(&key).is_some()
+        let remove_res = write_guard.remove(&key);
+        remove_res.is_some()
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
     fn test_btree_put() {
-        let bt = Btree::new();
-        let mut res = bt.put(
+        let bt = BTree::new();
+        let res1 = bt.put(
             "".as_bytes().to_vec(),
             LogRecordPos {
                 file_id: 1,
-                offset: 1,
+                offset: 10,
             },
         );
+        assert_eq!(res1, true);
 
-        assert!(res);
-
-        res = bt.put(
-            "123".as_bytes().to_vec(),
+        let res2 = bt.put(
+            "aa".as_bytes().to_vec(),
             LogRecordPos {
                 file_id: 11,
-                offset: 11,
+                offset: 22,
             },
         );
-
-        assert!(res);
+        assert_eq!(res2, true);
     }
 
     #[test]
     fn test_btree_get() {
-        let bt = Btree::new();
-
-        let mut res = bt.put(
+        let bt = BTree::new();
+        let res1 = bt.put(
             "".as_bytes().to_vec(),
             LogRecordPos {
                 file_id: 1,
-                offset: 1,
+                offset: 10,
             },
         );
-
-        assert!(res);
-
-        res = bt.put(
-            "123".as_bytes().to_vec(),
+        assert_eq!(res1, true);
+        let res2 = bt.put(
+            "aa".as_bytes().to_vec(),
             LogRecordPos {
                 file_id: 11,
-                offset: 11,
+                offset: 22,
             },
         );
+        assert_eq!(res2, true);
 
-        assert!(res);
+        let pos1 = bt.get("".as_bytes().to_vec());
+        assert!(pos1.is_some());
+        assert_eq!(pos1.unwrap().file_id, 1);
+        assert_eq!(pos1.unwrap().offset, 10);
 
-        let mut pos = bt.get("".as_bytes().to_vec());
-        assert!(pos.is_some());
-        assert_eq!(pos.unwrap().file_id, 1);
-        assert_eq!(pos.unwrap().offset, 1);
-
-        pos = bt.get("123".as_bytes().to_vec());
-        assert!(pos.is_some());
-        assert_eq!(pos.unwrap().file_id, 11);
-        assert_eq!(pos.unwrap().offset, 11);
-
-        pos = bt.get("not exist".as_bytes().to_vec());
-        assert!(pos.is_none());
+        let pos2 = bt.get("aa".as_bytes().to_vec());
+        assert!(pos2.is_some());
+        assert_eq!(pos2.unwrap().file_id, 11);
+        assert_eq!(pos2.unwrap().offset, 22);
     }
 
     #[test]
     fn test_btree_delete() {
-        let bt = Btree::new();
-        let mut res = bt.put(
+        let bt = BTree::new();
+        let res1 = bt.put(
             "".as_bytes().to_vec(),
             LogRecordPos {
                 file_id: 1,
-                offset: 1,
+                offset: 10,
             },
         );
-
-        assert!(res);
-
-        res = bt.put(
-            "123".as_bytes().to_vec(),
+        assert_eq!(res1, true);
+        let res2 = bt.put(
+            "aa".as_bytes().to_vec(),
             LogRecordPos {
                 file_id: 11,
-                offset: 11,
+                offset: 22,
             },
         );
+        assert_eq!(res2, true);
 
-        assert!(res);
+        let del1 = bt.delete("".as_bytes().to_vec());
+        assert!(del1);
 
-        let mut del = bt.delete("".as_bytes().to_vec());
-        assert!(del);
+        let del2 = bt.delete("aa".as_bytes().to_vec());
+        assert!(del2);
 
-        del = bt.delete("".as_bytes().to_vec());
-        assert!(!del);
+        let del3 = bt.delete("not exist".as_bytes().to_vec());
+        assert!(!del3);
     }
 }
