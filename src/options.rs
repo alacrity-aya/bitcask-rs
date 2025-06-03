@@ -34,3 +34,10 @@ impl Default for Options {
         }
     }
 }
+
+///options for interator
+#[derive(Default)]
+pub struct IteratorOptions {
+    pub prefix: Vec<u8>,
+    pub reverse: bool,
+}

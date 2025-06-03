@@ -2,9 +2,9 @@ use std::{collections::BTreeMap, sync::Arc};
 
 use parking_lot::RwLock;
 
-use crate::data::log_record::LogRecordPos;
+use crate::{data::log_record::LogRecordPos, options::IteratorOptions};
 
-use super::Indexer;
+use super::{IndexTypeIterator, Indexer};
 
 // BTree 索引，主要封装了标准库中的 BTreeMap 结构
 pub struct BTree {
@@ -35,6 +35,63 @@ impl Indexer for BTree {
         let mut write_guard = self.tree.write();
         let remove_res = write_guard.remove(&key);
         remove_res.is_some()
+    }
+
+    fn iterator(&self, options: IteratorOptions) -> Box<dyn IndexTypeIterator> {
+        let read_guard = self.tree.read();
+        let mut items = Vec::with_capacity(read_guard.len());
+        for (key, value) in read_guard.iter() {
+            items.push((key.clone(), *value));
+        }
+        if options.reverse {
+            items.reverse();
+        }
+
+        Box::new(BtreeIterator {
+            items,
+            curr_index: 0,
+            options,
+        })
+    }
+}
+
+///BTree iterator
+pub struct BtreeIterator {
+    items: Vec<(Vec<u8>, LogRecordPos)>, //Vec<&Vec<u8>, &LogRecordPos> may be better?
+    curr_index: usize,
+    options: IteratorOptions,
+}
+
+impl IndexTypeIterator for BtreeIterator {
+    fn rewind(&mut self) {
+        self.curr_index = 0;
+    }
+
+    fn seek(&mut self, key: Vec<u8>) {
+        self.curr_index = match self.items.binary_search_by(|(x, _)| {
+            if self.options.reverse {
+                x.cmp(&key).reverse()
+            } else {
+                x.cmp(&key)
+            }
+        }) {
+            Ok(equal_val) => equal_val,
+            Err(insert_val) => insert_val,
+        };
+    }
+
+    fn next(&mut self) -> Option<(&Vec<u8>, &LogRecordPos)> {
+        if self.curr_index >= self.items.len() {
+            return None;
+        }
+        while let Some(item) = self.items.get(self.curr_index) {
+            self.curr_index += 1;
+            let prefix = &self.options.prefix;
+            if prefix.is_empty() || item.0.starts_with(prefix) {
+                return Some((&item.0, &item.1));
+            }
+        }
+        None
     }
 }
 

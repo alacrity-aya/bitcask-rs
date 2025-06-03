@@ -1,6 +1,9 @@
 pub mod btree;
 
-use crate::{data::log_record::LogRecordPos, options::IndexType};
+use crate::{
+    data::log_record::LogRecordPos,
+    options::{IndexType, IteratorOptions},
+};
 
 /// Indexer 抽象索引接口，后续如果想要接入其他的数据结构，则直接实现这个接口即可
 pub trait Indexer: Sync + Send {
@@ -12,6 +15,9 @@ pub trait Indexer: Sync + Send {
 
     /// 根据 key 删除对应的索引位置信息
     fn delete(&self, key: Vec<u8>) -> bool;
+
+    ///generate iterator
+    fn iterator(&self, options: IteratorOptions) -> Box<dyn IndexTypeIterator>;
 }
 
 /// 根据类型打开内存索引
@@ -20,4 +26,12 @@ pub fn new_indexer(index_type: IndexType) -> impl Indexer {
         IndexType::BTree => btree::BTree::new(),
         IndexType::SkipList => todo!(),
     }
+}
+
+pub trait IndexTypeIterator: Sync + Send {
+    fn rewind(&mut self);
+
+    fn seek(&mut self, key: Vec<u8>);
+
+    fn next(&mut self) -> Option<(&Vec<u8>, &LogRecordPos)>;
 }
