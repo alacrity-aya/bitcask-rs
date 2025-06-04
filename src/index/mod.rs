@@ -31,6 +31,7 @@ pub fn new_indexer(index_type: IndexType) -> impl Indexer {
 pub trait IndexTypeIterator: Sync + Send {
     fn rewind(&mut self);
 
+    //find the first element bigger than key
     fn seek(&mut self, key: Vec<u8>);
 
     fn next(&mut self) -> Option<(&Vec<u8>, &LogRecordPos)>;

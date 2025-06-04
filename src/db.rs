@@ -21,7 +21,7 @@ pub struct Engine {
     options: Arc<Options>,
     active_file: Arc<RwLock<DataFile>>, // 当前活跃数据文件
     older_files: Arc<RwLock<HashMap<u32, DataFile>>>, // 旧的数据文件
-    index: Box<dyn index::Indexer>,     // 数据内存索引
+    pub index: Box<dyn index::Indexer>, // 数据内存索引
     file_ids: Vec<u32>, // 数据库启动时的文件 id，只用于加载索引时使用，不能在其他的地方更新或使用
 }
 
