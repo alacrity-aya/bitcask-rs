@@ -1,8 +1,9 @@
+use bytes::Bytes;
 use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::{db::Engine, index::IndexTypeIterator, options::IteratorOptions};
+use crate::{db::Engine, errors::Result, index::IndexTypeIterator, options::IteratorOptions};
 
 /// iterator interface
 pub struct Iterator<'a> {
@@ -16,5 +17,109 @@ impl Engine {
             index_iter: Arc::new(RwLock::new(self.index.iterator(options))),
             engine: self,
         }
+    }
+
+    pub fn list_keys(&self) -> Result<Vec<bytes::Bytes>> {
+        // may be optional there is better?
+        self.index.list_keys()
+    }
+
+    pub fn fold<F>(&self, f: F) -> Result<()>
+    //there is no need to Result<()> i think
+    where
+        Self: Sized,
+        F: Fn(Bytes, Bytes) -> bool,
+    {
+        let iter = self.iter(IteratorOptions::default());
+        while let Some((key, value)) = iter.next() {
+            if !f(key, value) {
+                break;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Iterator<'_> {
+    pub fn rewind(&self) {
+        let mut index_iter = self.index_iter.write();
+        index_iter.rewind();
+    }
+
+    pub fn seek(&self, key: Vec<u8>) {
+        let mut index_iter = self.index_iter.write();
+        index_iter.seek(key);
+    }
+
+    pub fn next(&self) -> Option<(Bytes, Bytes)> {
+        let mut index_iter = self.index_iter.write();
+        if let Some(item) = index_iter.next() {
+            let value = self
+                .engine
+                .get_value_by_position(item.1)
+                .expect("failed to get value from data file");
+            return Some((Bytes::from(item.0.to_vec()), value));
+        }
+        None
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use crate::{options::Options, util::rand_kv::get_test_value};
+
+    use super::*;
+
+    #[test]
+    fn test_iterator_seek() {
+        let mut opts = Options::default();
+
+        std::fs::remove_dir_all(opts.clone().dir_path).expect("failed to remove path");
+        opts.data_file_size = 64 * 1024 * 1024;
+        let engine = Engine::open(opts.clone()).expect("failed to open engine");
+
+        let iter = engine.iter(IteratorOptions::default());
+        iter.seek("aa".as_bytes().to_vec());
+        assert!(iter.next().is_none());
+
+        let put_res = engine.put(Bytes::from("aacc"), get_test_value(10));
+        assert!(put_res.is_ok());
+
+        let iter = engine.iter(IteratorOptions::default());
+        iter.seek("a".as_bytes().to_vec());
+        assert!(iter.next().is_some());
+
+        let put_res = engine.put(Bytes::from("eecc"), get_test_value(10));
+        assert!(put_res.is_ok());
+        let put_res = engine.put(Bytes::from("bbac"), get_test_value(10));
+        assert!(put_res.is_ok());
+        let put_res = engine.put(Bytes::from("ccde"), get_test_value(10));
+        assert!(put_res.is_ok());
+
+        let iter = engine.iter(IteratorOptions::default());
+        iter.seek("a".as_bytes().to_vec());
+        assert_eq!(iter.next().unwrap().0, Bytes::from("aacc"));
+
+        std::fs::remove_dir_all(opts.clone().dir_path).expect("failed to remove path");
+    }
+
+    #[test]
+    fn test_list_keys() {
+        let opts = Options::default();
+
+        let engine = Engine::open(opts.clone()).expect("failed to open engine");
+
+        let keys = engine.list_keys();
+        assert!(keys.is_ok());
+        // assert!(keys.ok().is_none());
+
+        engine.put(Bytes::from("eecc"), get_test_value(10));
+        engine.put(Bytes::from("bbac"), get_test_value(10));
+
+        let keys = engine.list_keys().unwrap();
+        assert_eq!(keys, vec![Bytes::from("bbac"), Bytes::from("eecc")]);
+
+        std::fs::remove_dir_all(opts.clone().dir_path).expect("failed to remove path");
     }
 }

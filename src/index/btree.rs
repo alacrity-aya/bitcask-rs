@@ -1,10 +1,13 @@
 use std::{collections::BTreeMap, sync::Arc};
 
+use bytes::Bytes;
 use parking_lot::RwLock;
 
 use crate::{data::log_record::LogRecordPos, options::IteratorOptions};
 
 use super::{IndexTypeIterator, Indexer};
+
+use crate::errors::Result;
 
 // BTree 索引，主要封装了标准库中的 BTreeMap 结构
 pub struct BTree {
@@ -52,6 +55,15 @@ impl Indexer for BTree {
             curr_index: 0,
             options,
         })
+    }
+
+    fn list_keys(&self) -> Result<Vec<bytes::Bytes>> {
+        let read_guard = self.tree.read();
+        let mut keys = Vec::with_capacity(read_guard.len());
+        for (key, _) in read_guard.iter() {
+            keys.push(Bytes::copy_from_slice(key));
+        }
+        Ok(keys)
     }
 }
 

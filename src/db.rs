@@ -149,7 +149,6 @@ impl Engine {
             return Err(Errors::KeyIsEmpty);
         }
 
-        // 从内存索引中获取 key 对应的数据信息
         let pos = self.index.get(key.to_vec());
         // 如果 key 不存在则直接返回
         if pos.is_none() {
@@ -158,6 +157,10 @@ impl Engine {
 
         // 从对应的数据文件中获取对应的 LogRecord
         let log_record_pos = pos.unwrap();
+        self.get_value_by_position(&log_record_pos)
+    }
+
+    pub(crate) fn get_value_by_position(&self, log_record_pos: &LogRecordPos) -> Result<Bytes> {
         let active_file = self.active_file.read();
         let oldre_files = self.older_files.read();
         let log_record = match active_file.get_file_id() == log_record_pos.file_id {
