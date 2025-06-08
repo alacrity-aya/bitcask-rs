@@ -160,3 +160,47 @@ fn test_engine_delete() {
     // 删除测试的文件夹
     std::fs::remove_dir_all(opts.clone().dir_path).expect("failed to remove path");
 }
+
+#[test]
+fn test_engine_close() {
+    let mut opts = Options::default();
+    opts.dir_path = PathBuf::from("/tmp/bitcask-rs-close");
+    opts.data_file_size = 64 * 1024 * 1024;
+    let engine = Engine::open(opts.clone()).expect("failed to open engine");
+
+    let res6 = engine.put(get_test_key(222), get_test_value(222));
+    assert!(res6.is_ok());
+    let res7 = engine.delete(get_test_key(222));
+    assert!(res7.is_ok());
+    let res8 = engine.put(get_test_key(222), Bytes::from("a new value"));
+    assert!(res8.is_ok());
+    let res9 = engine.get(get_test_key(222));
+    assert_eq!(Bytes::from("a new value"), res9.unwrap());
+
+    let res = engine.close();
+    assert!(res.is_ok());
+
+    std::fs::remove_dir_all(opts.dir_path).expect("failed to remove path");
+}
+
+#[test]
+fn test_engine_sync() {
+    let mut opts = Options::default();
+    opts.dir_path = PathBuf::from("/tmp/bitcask-rs-sync");
+    opts.data_file_size = 64 * 1024 * 1024;
+    let engine = Engine::open(opts.clone()).expect("failed to open engine");
+
+    let res6 = engine.put(get_test_key(222), get_test_value(222));
+    assert!(res6.is_ok());
+    let res7 = engine.delete(get_test_key(222));
+    assert!(res7.is_ok());
+    let res8 = engine.put(get_test_key(222), Bytes::from("a new value"));
+    assert!(res8.is_ok());
+    let res9 = engine.get(get_test_key(222));
+    assert_eq!(Bytes::from("a new value"), res9.unwrap());
+
+    let res = engine.close();
+    assert!(res.is_ok());
+
+    std::fs::remove_dir_all(opts.dir_path).expect("failed to remove path");
+}

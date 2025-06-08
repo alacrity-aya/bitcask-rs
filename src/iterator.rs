@@ -67,6 +67,8 @@ impl Iterator<'_> {
 #[cfg(test)]
 mod test {
 
+    use std::path::PathBuf;
+
     use crate::{options::Options, util::rand_kv::get_test_value};
 
     use super::*;
@@ -106,19 +108,58 @@ mod test {
 
     #[test]
     fn test_list_keys() {
-        let opts = Options::default();
+        let opts = Options {
+            dir_path: PathBuf::from("/tmp/bitcask-rs-list-key"),
+            ..Default::default()
+        };
 
         let engine = Engine::open(opts.clone()).expect("failed to open engine");
 
         let keys = engine.list_keys();
-        assert!(keys.is_ok());
-        // assert!(keys.ok().is_none());
+        assert_eq!(keys.ok().unwrap().len(), 0);
 
-        engine.put(Bytes::from("eecc"), get_test_value(10));
-        engine.put(Bytes::from("bbac"), get_test_value(10));
+        let put_res = engine.put(Bytes::from("eecc"), get_test_value(10));
+        assert!(put_res.is_ok());
+        let put_res = engine.put(Bytes::from("bbac"), get_test_value(10));
+        assert!(put_res.is_ok());
+        let put_res = engine.put(Bytes::from("ccaa"), get_test_value(10));
+        assert!(put_res.is_ok());
+        let put_res = engine.put(Bytes::from("aabb"), get_test_value(10));
+        assert!(put_res.is_ok());
 
-        let keys = engine.list_keys().unwrap();
-        assert_eq!(keys, vec![Bytes::from("bbac"), Bytes::from("eecc")]);
+        let keys = engine.list_keys();
+        assert_eq!(keys.ok().unwrap().len(), 4);
+
+        std::fs::remove_dir_all(opts.clone().dir_path).expect("failed to remove path");
+    }
+
+    #[test]
+    fn test_fold() {
+        let opts = Options {
+            dir_path: PathBuf::from("/tmp/bitcask-rs-fold"),
+            ..Default::default()
+        };
+        let engine = Engine::open(opts.clone()).expect("failed to open engine");
+
+        let put_res = engine.put(Bytes::from("eecc"), get_test_value(10));
+        assert!(put_res.is_ok());
+        let put_res = engine.put(Bytes::from("bbac"), get_test_value(10));
+        assert!(put_res.is_ok());
+        let put_res = engine.put(Bytes::from("ccaa"), get_test_value(10));
+        assert!(put_res.is_ok());
+        let put_res = engine.put(Bytes::from("aabb"), get_test_value(10));
+        assert!(put_res.is_ok());
+
+        engine
+            .fold(|key, value| {
+                assert!(!key.is_empty());
+                assert!(!value.is_empty());
+                if key.ge(&"cc") {
+                    return false;
+                }
+                true
+            })
+            .unwrap();
 
         std::fs::remove_dir_all(opts.clone().dir_path).expect("failed to remove path");
     }

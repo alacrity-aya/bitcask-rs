@@ -84,6 +84,16 @@ impl Engine {
         Ok(engine)
     }
 
+    pub fn close(&self) -> Result<()> {
+        let read_guard = self.active_file.read();
+        read_guard.sync()
+    }
+
+    pub fn sync(&self) -> Result<()> {
+        let read_guard = self.active_file.read();
+        read_guard.sync()
+    }
+
     /// 存储 key/value 数据，key 不能为空
     pub fn put(&self, key: Bytes, value: Bytes) -> Result<()> {
         // 判断 key 的有效性
