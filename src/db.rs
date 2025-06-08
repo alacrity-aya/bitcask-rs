@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs, path::PathBuf, sync::Arc};
 
 use bytes::Bytes;
 use log::warn;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 
 use crate::{
     data::{
@@ -23,6 +23,7 @@ pub struct Engine {
     older_files: Arc<RwLock<HashMap<u32, DataFile>>>, // 旧的数据文件
     pub index: Box<dyn index::Indexer>, // 数据内存索引
     file_ids: Vec<u32>, // 数据库启动时的文件 id，只用于加载索引时使用，不能在其他的地方更新或使用
+    pub(crate) batch_commit_lock: Mutex<()>,
 }
 
 impl Engine {
@@ -76,6 +77,7 @@ impl Engine {
             older_files: Arc::new(RwLock::new(older_files)),
             index: Box::new(index::new_indexer(options.index_type)),
             file_ids,
+            batch_commit_lock: Mutex::new(()),
         };
 
         // 从数据文件中加载索引

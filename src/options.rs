@@ -41,3 +41,19 @@ pub struct IteratorOptions {
     pub prefix: Vec<u8>,
     pub reverse: bool,
 }
+
+pub struct WriteBatchOptions {
+    pub max_batch_num: usize,
+
+    //whether to sync when commiting
+    pub sync_writes: bool,
+}
+
+impl Default for WriteBatchOptions {
+    fn default() -> Self {
+        Self {
+            max_batch_num: 10000,
+            sync_writes: true,
+        }
+    }
+}
